@@ -1,0 +1,29 @@
+# Defaults
+node_modules/
+dist/
+.env
+.env.local
+.DS_Store
+
+# Next.js
+/.next/
+/out/
+build/
+
+# Turborepo
+.turbo/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
