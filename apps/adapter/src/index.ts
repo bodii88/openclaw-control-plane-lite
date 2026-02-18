@@ -19,6 +19,7 @@ import { configRoutes } from "./routes/config.js";
 import { logsRoutes } from "./routes/logs.js";
 import { sessionsRoutes } from "./routes/sessions.js";
 import { systemRoutes } from "./routes/system.js";
+import { approvalRoutes } from "./routes/approval.js";
 
 import { shouldUseWsl } from "./lib/cli.js";
 import {
@@ -70,6 +71,7 @@ app.use("/api/config", configRoutes);
 app.use("/api/logs", logsRoutes);
 app.use("/api/sessions", sessionsRoutes);
 app.use("/api/system", systemRoutes);
+app.use("/api/approval", approvalRoutes);
 
 // 404 handler (after all routes)
 app.use(notFoundHandler);
@@ -94,12 +96,12 @@ const server = app.listen(PORT, HOST, () => {
 // Graceful shutdown
 const gracefulShutdown = (signal: string) => {
     console.log(`\n${signal} received. Starting graceful shutdown...`);
-    
+
     server.close(() => {
         console.log("HTTP server closed");
         process.exit(0);
     });
-    
+
     // Force shutdown after 10s
     setTimeout(() => {
         console.error("Forced shutdown after timeout");

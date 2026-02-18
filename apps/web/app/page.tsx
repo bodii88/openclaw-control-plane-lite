@@ -8,11 +8,13 @@ import ChannelsTab from "./components/ChannelsTab";
 import ConfigTab from "./components/ConfigTab";
 import LogsTab from "./components/LogsTab";
 import WorkflowsTab from "./components/WorkflowsTab";
+import ApprovalWorkflowTab from "./components/ApprovalWorkflowTab";
 import ConnectModal from "./components/ConnectModal";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: "📊" },
   { id: "workflows", label: "Workflows", icon: "⚡" },
+  { id: "approval", label: "Approvals", icon: "✅" },
   { id: "cron", label: "Tasks", icon: "⏰" },
   { id: "skills", label: "Skills", icon: "🧩" },
   { id: "channels", label: "Channels", icon: "📡" },
@@ -104,6 +106,7 @@ export default function Dashboard() {
       <main className="app-main" role="tabpanel">
         {activeTab === "overview" && <OverviewTab api={api} />}
         {activeTab === "workflows" && <WorkflowsTab api={api} />}
+        {activeTab === "approval" && <ApprovalWorkflowTab api={api} />}
         {activeTab === "cron" && <CronTab api={api} />}
         {activeTab === "skills" && <SkillsTab api={api} />}
         {activeTab === "channels" && <ChannelsTab api={api} />}
