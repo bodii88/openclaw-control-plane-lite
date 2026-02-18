@@ -9,6 +9,12 @@ interface Props {
 type TriggerType = "command" | "cron";
 type ActionType = "log" | "reply";
 
+const TEMPLATES = [
+    { title: "Daily Briefing", icon: "🗞️", trigger: "cron", cron: "0 9 * * *", action: "reply", message: "Good morning! Here is your daily briefing." },
+    { title: "Quick Hello", icon: "👋", trigger: "command", command: "hello", action: "reply", message: "Hello! How can I help you today?" },
+    { title: "Hourly Status", icon: "💓", trigger: "cron", cron: "0 * * * *", action: "log", message: "System operational." },
+];
+
 export default function WorkflowsTab({ api }: Props) {
     const [name, setName] = useState("");
     const [trigger, setTrigger] = useState<TriggerType>("command");
@@ -17,6 +23,16 @@ export default function WorkflowsTab({ api }: Props) {
     const [actionConfig, setActionConfig] = useState({ message: "Hello from OpenClaw!" });
     const [saving, setSaving] = useState(false);
     const [created, setCreated] = useState<{ path: string } | null>(null);
+
+    function loadTemplate(t: any) {
+        setName(t.title);
+        setTrigger(t.trigger as TriggerType);
+        if (t.trigger === "cron") setTriggerConfig({ command: "", cron: t.cron });
+        else setTriggerConfig({ cron: "* * * * *", command: t.command });
+        setAction(t.action as ActionType);
+        setActionConfig({ message: t.message });
+        setCreated(null);
+    }
 
     function generateCode() {
         const className = name.replace(/[^a-zA-Z0-9]/g, "") || "MySkill";
@@ -86,7 +102,7 @@ ${actionCode}
             </div>
 
             {created && (
-                <div className="alert alert-success mb-md">
+                <div className="alert alert-success mb-md animate-in">
                     <span>✅</span>
                     <div>
                         <strong>Workflow Created!</strong><br />
@@ -97,72 +113,96 @@ ${actionCode}
                 </div>
             )}
 
-            <div className="card">
+            <div className="grid-cols-3 gap-lg" style={{ gridTemplateColumns: "1fr 2fr" }}>
+                {/* Templates Sidebar */}
                 <div className="flex-col gap-md">
-                    {/* Step 1: Name */}
-                    <div className="form-group">
-                        <label className="form-label">1. Name your workflow</label>
-                        <input
-                            className="input"
-                            placeholder="e.g. Daily Greeting"
-                            value={name}
-                            onChange={e => setName(e.target.value)}
-                        />
+                    <div className="card p-md">
+                        <h3 className="card-title mb-sm">✨ Templates</h3>
+                        <p className="text-sm text-secondary mb-md">Start with a preset:</p>
+                        <div className="flex-col gap-sm">
+                            {TEMPLATES.map(t => (
+                                <button key={t.title} className="btn btn-ghost justify-start" style={{ textAlign: "left" }} onClick={() => loadTemplate(t)}>
+                                    <span style={{ marginRight: "8px" }}>{t.icon}</span> {t.title}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
-                    {/* Step 2: Trigger */}
-                    <div className="form-group">
-                        <label className="form-label">2. When should it run?</label>
-                        <div className="flex-row gap-sm mb-sm">
-                            <button className={`filter-chip ${trigger === "command" ? "active" : ""}`} onClick={() => setTrigger("command")}>💬 Command</button>
-                            <button className={`filter-chip ${trigger === "cron" ? "active" : ""}`} onClick={() => setTrigger("cron")}>⏰ Schedule (Cron)</button>
-                        </div>
+                    <div className="card p-md" style={{ background: "var(--bg-subtle)" }}>
+                        <h4 className="font-bold mb-xs">💡 Pro Tip</h4>
+                        <p className="text-sm">Skills are just TypeScript files. You can edit the generated code manually in <code>~/.openclaw/skills</code> later for more power!</p>
+                    </div>
+                </div>
 
-                        {trigger === "command" ? (
+                {/* Builder Form */}
+                <div className="card">
+                    <div className="flex-col gap-md">
+                        <h3 className="card-title">Builder</h3>
+                        {/* Step 1: Name */}
+                        <div className="form-group">
+                            <label className="form-label">1. Name your workflow</label>
                             <input
                                 className="input"
-                                placeholder="Command name (e.g. 'hello')"
-                                value={triggerConfig.command}
-                                onChange={e => setTriggerConfig({ ...triggerConfig, command: e.target.value })}
+                                placeholder="e.g. Daily Greeting"
+                                value={name}
+                                onChange={e => setName(e.target.value)}
                             />
-                        ) : (
-                            <input
-                                className="input"
-                                placeholder="Cron expression (e.g. '0 9 * * *')"
-                                value={triggerConfig.cron}
-                                onChange={e => setTriggerConfig({ ...triggerConfig, cron: e.target.value })}
-                            />
-                        )}
-                    </div>
-
-                    {/* Step 3: Action */}
-                    <div className="form-group">
-                        <label className="form-label">3. What should it do?</label>
-                        <div className="flex-row gap-sm mb-sm">
-                            <button className={`filter-chip ${action === "reply" ? "active" : ""}`} onClick={() => setAction("reply")}>↩️ Reply to User</button>
-                            <button className={`filter-chip ${action === "log" ? "active" : ""}`} onClick={() => setAction("log")}>📝 Log Console</button>
                         </div>
 
-                        <input
-                            className="input"
-                            placeholder={action === "reply" ? "Message to send" : "Message to log"}
-                            value={actionConfig.message}
-                            onChange={e => setActionConfig({ ...actionConfig, message: e.target.value })}
-                        />
-                    </div>
+                        {/* Step 2: Trigger */}
+                        <div className="form-group">
+                            <label className="form-label">2. When should it run?</label>
+                            <div className="flex-row gap-sm mb-sm">
+                                <button className={`filter-chip ${trigger === "command" ? "active" : ""}`} onClick={() => setTrigger("command")}>💬 Command</button>
+                                <button className={`filter-chip ${trigger === "cron" ? "active" : ""}`} onClick={() => setTrigger("cron")}>⏰ Schedule (Cron)</button>
+                            </div>
 
-                    {/* Preview */}
-                    <div className="form-group">
-                        <label className="form-label">Code Preview</label>
-                        <pre className="code-block" style={{ maxHeight: 200, overflow: 'auto' }}>
-                            {generateCode()}
-                        </pre>
-                    </div>
+                            {trigger === "command" ? (
+                                <input
+                                    className="input"
+                                    placeholder="Command name (e.g. 'hello')"
+                                    value={triggerConfig.command}
+                                    onChange={e => setTriggerConfig({ ...triggerConfig, command: e.target.value })}
+                                />
+                            ) : (
+                                <input
+                                    className="input"
+                                    placeholder="Cron expression (e.g. '0 9 * * *')"
+                                    value={triggerConfig.cron}
+                                    onChange={e => setTriggerConfig({ ...triggerConfig, cron: e.target.value })}
+                                />
+                            )}
+                        </div>
 
-                    <div className="flex-row justify-end">
-                        <button className="btn btn-primary" onClick={saveWorkflow} disabled={saving || !name}>
-                            {saving ? "Creating..." : "✨ Create Workflow"}
-                        </button>
+                        {/* Step 3: Action */}
+                        <div className="form-group">
+                            <label className="form-label">3. What should it do?</label>
+                            <div className="flex-row gap-sm mb-sm">
+                                <button className={`filter-chip ${action === "reply" ? "active" : ""}`} onClick={() => setAction("reply")}>↩️ Reply to User</button>
+                                <button className={`filter-chip ${action === "log" ? "active" : ""}`} onClick={() => setAction("log")}>📝 Log Console</button>
+                            </div>
+
+                            <input
+                                className="input"
+                                placeholder={action === "reply" ? "Message to send" : "Message to log"}
+                                value={actionConfig.message}
+                                onChange={e => setActionConfig({ ...actionConfig, message: e.target.value })}
+                            />
+                        </div>
+
+                        {/* Preview */}
+                        <div className="form-group">
+                            <label className="form-label">Code Preview</label>
+                            <pre className="code-block" style={{ maxHeight: 200, overflow: 'auto' }}>
+                                {generateCode()}
+                            </pre>
+                        </div>
+
+                        <div className="flex-row justify-end">
+                            <button className="btn btn-primary" onClick={saveWorkflow} disabled={saving || !name}>
+                                {saving ? "Creating..." : "✨ Create Workflow"}
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
