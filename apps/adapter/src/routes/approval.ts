@@ -93,8 +93,8 @@ module.exports = class WhatsAppApprovalWorkflow {
     name = "WhatsApp Approval Workflow";
     description = "Design approval pipeline: Designer -> GM -> CEO -> Publish";
     
-    // Define triggers based on configured keywords
-    triggers = ${JSON.stringify([...config.triggers.newRequest, ...config.triggers.approve, ...config.triggers.reject, ...config.triggers.changes])};
+    // Define triggers based on configured keywords. Adding #id for helper.
+    triggers = ${JSON.stringify([...config.triggers.newRequest, ...config.triggers.approve, ...config.triggers.reject, ...config.triggers.changes, "#id", "#chatid"])};
 
     // Configuration injected from Dashboard
     config = ${JSON.stringify(config, null, 4)};
@@ -104,8 +104,16 @@ module.exports = class WhatsAppApprovalWorkflow {
 
     async execute(context) {
         const { message, sender, group } = context;
-        const text = message.text?.toLowerCase() || "";
+        let text = message.text?.toLowerCase() || "";
         const hasMedia = message.image || message.video || message.document;
+
+        // 0. Helper Command: #id
+        if (text === "#id" || text === "#chatid") {
+             const groupId = group || "Direct Message";
+             const reply = \`🆔 **Configuration Helper**\\n\\n📂 Group ID: \` + groupId + \`\\n👤 Your ID: \` + sender;
+             // Send back to where it came from
+             return context.send(groupId, reply);
+        }
 
         // 1. Handle New Request (Intake)
         if (this.isNewRequest(text)) {
@@ -132,12 +140,8 @@ module.exports = class WhatsAppApprovalWorkflow {
         }
 
         // 2. Handle Approvals (GM / CEO)
-        // This is a simplified logic generation. 
-        // In a real implementation we would parse the Reply-To message or look up active requests.
-        
         if (this.isApprove(text)) {
-            // Logic to find current request and advance stage
-            // ...
+             // Simulation logic
              return context.reply("✅ Approved (Simulation)");
         }
         

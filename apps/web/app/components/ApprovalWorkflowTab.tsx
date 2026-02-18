@@ -124,7 +124,19 @@ export default function ApprovalWorkflowTab({ api }: Props) {
                 {activeSection === "groups" && (
                     <div className="flex-col gap-md animate-in">
                         <h3 className="card-title">WhatsApp Groups Configuration</h3>
-                        <p className="text-sm text-secondary">Enter Group IDs (e.g. 12036302...)</p>
+
+                        {/* Helper Tip */}
+                        <div className="alert alert-info">
+                            <span style={{ fontSize: "1.2rem" }}>💡</span>
+                            <div>
+                                <strong>How to find Group IDs:</strong><br />
+                                1. Add your bot to the WhatsApp group.<br />
+                                2. Type <code>#id</code> in the group chat.<br />
+                                3. The bot will reply with the Group ID (e.g. <code>12036302...</code>).
+                            </div>
+                        </div>
+
+                        <p className="text-sm text-secondary">Enter Group IDs below:</p>
 
                         <div className="form-group">
                             <label className="form-label">🧩 Design Intake Group</label>
