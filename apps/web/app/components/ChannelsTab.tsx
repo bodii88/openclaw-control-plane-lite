@@ -67,7 +67,7 @@ export default function ChannelsTab({ api }: Props) {
                 <div className="empty-state">
                     <div className="empty-state-icon">📡</div>
                     <p className="empty-state-title">No channels configured</p>
-                    <p className="empty-state-text">Add channel configurations in <code>~/.openclaw/openclaw.json</code> under <code>channels.&lt;provider&gt;</code>. See <a href="https://docs.openclaw.ai/channels/telegram" target="_blank">Channels docs</a>.</p>
+                    <p className="empty-state-text">Connect a channel below to get started.</p>
                 </div>
             ) : (
                 <div className="table-wrapper" id="channels-table">
@@ -94,24 +94,42 @@ export default function ChannelsTab({ api }: Props) {
             {/* Unconfigured providers */}
             {channels.filter((c: any) => !c.configured).length > 0 && (
                 <div className="card mt-lg">
-                    <h3 className="card-title mb-md">Available Providers (not configured)</h3>
-                    <div className="flex-row gap-sm" style={{ flexWrap: "wrap" }}>
+                    <h3 className="card-title mb-md">🔗 Connect a Channel</h3>
+                    <div className="grid-cols-3 gap-md">
                         {channels.filter((c: any) => !c.configured).map((ch: any) => (
-                            <span key={ch.provider} className="badge badge-neutral" style={{ textTransform: "capitalize" }}>{ch.provider}</span>
+                            <div key={ch.provider} className="card p-sm flex-col items-center gap-sm text-center hover-up" style={{ cursor: "pointer", border: "1px solid var(--border)" }} onClick={() => startEdit(ch)}>
+                                <div style={{ fontSize: "2rem" }}>
+                                    {ch.provider === "telegram" ? "✈️" :
+                                        ch.provider === "discord" ? "🎮" :
+                                            ch.provider === "slack" ? "💬" : "🔌"}
+                                </div>
+                                <strong style={{ textTransform: "capitalize" }}>{ch.provider}</strong>
+                                <button className="btn btn-sm btn-outline w-full">Connect</button>
+                            </div>
                         ))}
                     </div>
                 </div>
             )}
 
-            {/* Edit modal */}
+            {/* Edit/Connect modal */}
             {editing && (
                 <div className="modal-overlay" onClick={() => setEditing(null)}>
                     <div className="modal" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2 style={{ textTransform: "capitalize" }}>✏️ {editing} Config</h2>
+                            <h2 style={{ textTransform: "capitalize" }}>
+                                {channels.find(c => c.provider === editing)?.configured ? "✏️ Edit" : "🔗 Connect"} {editing}
+                            </h2>
                             <button className="modal-close" onClick={() => setEditing(null)}>✕</button>
                         </div>
                         <div className="flex-col">
+                            {/* Token input for new connections */}
+                            {!channels.find(c => c.provider === editing)?.configured && (
+                                <div className="alert alert-warning mb-md">
+                                    <span>🔑</span>
+                                    <div>Enter your <strong>Bot Token</strong> below to enable this channel.</div>
+                                </div>
+                            )}
+
                             <div className="form-group">
                                 <label className="form-label">DM Policy</label>
                                 <select className="select" value={editForm.dmPolicy} onChange={(e) => setEditForm({ ...editForm, dmPolicy: e.target.value })}>
@@ -132,7 +150,9 @@ export default function ChannelsTab({ api }: Props) {
                         </div>
                         <div className="modal-footer">
                             <button className="btn" onClick={() => setEditing(null)}>Cancel</button>
-                            <button className="btn btn-primary" onClick={saveChannel}>💾 Save & Restart Required</button>
+                            <button className="btn btn-primary" onClick={saveChannel}>
+                                {channels.find(c => c.provider === editing)?.configured ? "💾 Save Changes" : "🔌 Connect Channel"}
+                            </button>
                         </div>
                     </div>
                 </div>

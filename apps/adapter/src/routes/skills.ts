@@ -6,6 +6,8 @@
 import { Router } from "express";
 import { runCli } from "../lib/cli.js";
 import { readConfig, writeConfig, getSkillsDir } from "../lib/config.js";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
 import JSON5 from "json5";
 
 export const skillsRoutes = Router();
@@ -92,6 +94,30 @@ skillsRoutes.post("/sync", async (_req, res) => {
         res.json({
             ok: result.exitCode === 0,
             data: { raw: result.stdout },
+        });
+    } catch (err: any) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+/** POST /api/skills/create — create a new skill file */
+skillsRoutes.post("/create", async (req, res) => {
+    try {
+        const { name, content, filename } = req.body;
+        if (!name || !content) return res.status(400).json({ ok: false, error: "name and content are required" });
+
+        const skillsDir = await getSkillsDir();
+        await mkdir(skillsDir, { recursive: true });
+
+        const safeFilename = (filename || name).replace(/[^a-zA-Z0-9_-]/g, "").toLowerCase() + ".ts";
+        const filePath = path.join(skillsDir, safeFilename);
+
+        await writeFile(filePath, content, "utf-8");
+
+        res.json({
+            ok: true,
+            data: { path: filePath, name },
+            warnings: ["Skill created. You may need to restart the Gateway for it to be loaded if it's not hot-reloaded."],
         });
     } catch (err: any) {
         res.status(500).json({ ok: false, error: err.message });

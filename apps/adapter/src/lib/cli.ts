@@ -12,7 +12,17 @@
 import { exec, ExecOptions } from "child_process";
 import os from "os";
 
-const TIMEOUT_MS = 30_000;
+const DEFAULT_TIMEOUT_MS = 30_000;
+
+const COMMAND_TIMEOUTS: Record<string, number> = {
+    "gateway restart": 60_000,
+    "cron add": 10_000,
+    "cron remove": 10_000,
+    "skills install": 120_000,
+    "clawhub install": 120_000,
+    "clawhub update": 120_000,
+    doctor: 60_000,
+};
 
 /**
  * Detect whether to use WSL.
@@ -79,20 +89,96 @@ export interface CliResult {
     stdout: string;
     stderr: string;
     exitCode: number;
+    duration: number;
+    retries?: number;
 }
 
-export async function runCli(args: string[], options?: ExecOptions): Promise<CliResult> {
+export async function runCli(args: string[], options?: ExecOptions & { retries?: number }): Promise<CliResult> {
     const command = buildCommand(args);
+    const maxRetries = options?.retries ?? 1;
+    const commandKey = args.slice(0, 2).join(" ");
+    const timeout = COMMAND_TIMEOUTS[commandKey] || DEFAULT_TIMEOUT_MS;
+    
+    let lastError: Error | null = null;
+    const startTime = Date.now();
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const result = await executeCommand(command, { timeout, ...options });
+            
+            // If command succeeded but stderr has content (warnings), log it
+            if (result.stderr && result.exitCode === 0) {
+                console.warn(`[CLI WARNING] ${commandKey}: ${result.stderr.substring(0, 200)}`);
+            }
+            
+            return {
+                ...result,
+                duration: Date.now() - startTime,
+                retries: attempt > 1 ? attempt : undefined,
+            };
+        } catch (error) {
+            lastError = error as Error;
+            
+            // Don't retry if it's a user error (bad arguments, etc.)
+            if (isUserError(error as Error)) {
+                break;
+            }
+            
+            // Don't retry on last attempt
+            if (attempt < maxRetries) {
+                const delay = Math.min(1000 * attempt, 3000); // Exponential backoff capped at 3s
+                console.log(`[CLI RETRY] ${commandKey} attempt ${attempt + 1}/${maxRetries} after ${delay}ms`);
+                await sleep(delay);
+            }
+        }
+    }
+    
+    // All retries exhausted
+    return {
+        stdout: "",
+        stderr: formatError(lastError),
+        exitCode: (lastError as any)?.code ?? 1,
+        duration: Date.now() - startTime,
+        retries: maxRetries,
+    };
+}
 
-    return new Promise((resolve) => {
-        exec(command, { timeout: TIMEOUT_MS, ...options }, (error, stdout, stderr) => {
-            resolve({
-                stdout: stdout?.toString() || "",
-                stderr: stderr?.toString() || "",
-                exitCode: error ? (error as any).code ?? 1 : 0,
-            });
+function executeCommand(command: string, options: ExecOptions): Promise<Omit<CliResult, "duration" | "retries">> {
+    return new Promise((resolve, reject) => {
+        exec(command, options, (error, stdout, stderr) => {
+            if (error && !stderr) {
+                reject(error);
+            } else {
+                resolve({
+                    stdout: stdout?.toString() || "",
+                    stderr: stderr?.toString() || "",
+                    exitCode: error ? (error as any).code ?? 1 : 0,
+                });
+            }
         });
     });
+}
+
+function isUserError(error: Error): boolean {
+    const userErrorCodes = ["ENOENT", "EACCES", "EPERM"];
+    return userErrorCodes.some(code => error.message?.includes(code));
+}
+
+function formatError(error: Error | null): string {
+    if (!error) return "Unknown error";
+    
+    if (error.message?.includes("ETIMEDOUT") || error.message?.includes("timeout")) {
+        return `Command timed out after ${DEFAULT_TIMEOUT_MS}ms`;
+    }
+    if (error.message?.includes("ECONNREFUSED")) {
+        return "Connection refused. Is the OpenClaw Gateway running?";
+    }
+    
+    return error.message;
+}
+
+function sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
